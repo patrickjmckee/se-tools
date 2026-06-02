@@ -1,0 +1,7 @@
+.env
+.claude/
+profile.md
+__pycache__/
+*.pyc
+*.pyo
+*.csv
