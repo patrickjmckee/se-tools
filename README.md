@@ -220,6 +220,59 @@ Generates 2-4 test cases per requirement. Prints each test case to console as it
 
 ---
 
+## Tool 4 -- Mermaid SysML Diagram Generator
+
+Takes a natural language description of a subsystem or interaction and generates a Mermaid diagram via Claude API. Diagrams render natively in Confluence and serve as lightweight SysML proxies.
+
+### Supported diagram types
+
+| Flag | Mermaid type | SysML proxy |
+|---|---|---|
+| `bdd` | `classDiagram` | Block Definition Diagram |
+| `seq` | `sequenceDiagram` | Sequence Diagram |
+| `state` | `stateDiagram-v2` | State Machine Diagram |
+| `auto` | Claude infers | Best fit for description |
+
+### Usage
+
+**Auto-infer type (recommended for first pass):**
+
+```bash
+python3 -m tools.tool4_mermaid --text "The C2 Ground Station consists of an Operator Console, a Communications Manager..."
+```
+
+**Specify diagram type:**
+
+```bash
+python3 -m tools.tool4_mermaid --text "..." --type bdd
+python3 -m tools.tool4_mermaid --text "..." --type seq
+python3 -m tools.tool4_mermaid --text "..." --type state
+```
+
+**From a text file:**
+
+```bash
+python3 -m tools.tool4_mermaid --file subsystem_description.txt --type bdd
+```
+
+**Specify output path:**
+
+```bash
+python3 -m tools.tool4_mermaid --text "..." --output c2_bdd.md
+```
+
+**Interactive mode:**
+
+```bash
+python3 -m tools.tool4_mermaid
+```
+
+Default output path: `diagram_output.md` in the current working directory.
+
+Output is a markdown file containing the diagram title, type, notes, and a fenced `mermaid` code block ready to paste into Confluence.
+
+---
+
 ## File structure
 
 ```
@@ -240,6 +293,13 @@ se-tools/
       formatter.py      -- console output and CSV append
       config.py         -- model name, output field definitions
       cli.py            -- argparse CLI, reads requirements CSV, writes traceability matrix
+    tool4_mermaid/
+      __init__.py
+      __main__.py       -- module entry point
+      generator.py      -- Claude API diagram generation
+      formatter.py      -- console output and .md file save
+      config.py         -- model name, supported diagram types
+      cli.py            -- argparse CLI and interactive session loop
   docs/
   tests/
   .env                  -- API key (gitignored)
