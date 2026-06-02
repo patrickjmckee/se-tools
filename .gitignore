@@ -1,7 +1,11 @@
 .env
 .claude/
 profile.md
+.venv/
 __pycache__/
 *.pyc
 *.pyo
 *.csv
+*.egg-info/
+dist/
+build/

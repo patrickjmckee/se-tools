@@ -6,13 +6,28 @@ Systems engineering productivity tools for ASI. Built with Python 3.12 and the A
 
 ## Setup
 
-### 1. Install dependencies
+### 1. Clone and create virtual environment
 
 ```bash
-pip3 install anthropic python-dotenv --break-system-packages
+git clone https://github.com/patrickjmckee/se-tools.git
+cd se-tools
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-### 2. Set API key
+### 2. Install the package
+
+```bash
+pip install -e .
+```
+
+For development tools (black, ruff, mypy, pytest):
+
+```bash
+pip install -e ".[dev]"
+```
+
+### 3. Set API key
 
 Create `se-tools/.env`:
 
@@ -22,12 +37,22 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 The `.env` file is gitignored. Do not commit it.
 
-### 3. Run from project root
+### 4. Run tools
 
-All tools are run as Python modules from `/home/patrickjmckee/Projects/se-tools/`.
+After installation, tools are available as commands (venv must be active):
 
 ```bash
-cd /home/patrickjmckee/Projects/se-tools
+req-analyzer --text "..."
+traceability --input requirements_output.csv
+mermaid-gen --text "..."
+```
+
+Or run as Python modules from the project root:
+
+```bash
+python -m tools.tool1_req_analyzer
+python -m tools.tool3_traceability --input requirements_output.csv
+python -m tools.tool4_mermaid
 ```
 
 ---

@@ -1,0 +1,116 @@
+# ==============================================================================
+# Metadata
+# ==============================================================================
+[project]
+name = "se-tools"
+version = "0.1.0"
+description = "Systems engineering productivity tools."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "" }
+authors = [
+    { name = "Patrick McKee", email = "patrickjmckee@msn.com" }
+]
+keywords = [
+    "systems engineering",
+    "requirements",
+    "traceability",
+    "mermaid",
+    "sysml",
+    "jama",
+    "iso29148",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Documentation",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+]
+
+# ==============================================================================
+# Runtime dependencies
+# ==============================================================================
+dependencies = [
+    "anthropic>=0.105.2",
+    "python-dotenv>=1.0.0",
+]
+
+# ==============================================================================
+# Optional / development dependencies
+# ==============================================================================
+[project.optional-dependencies]
+dev = [
+    "black>=24.0",
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "mypy>=1.8",
+    "ruff>=0.2",
+]
+
+# ==============================================================================
+# Project URLs
+# ==============================================================================
+[project.urls]
+Homepage = "https://github.com/patrickjmckee/se-tools"
+Repository = "https://github.com/patrickjmckee/se-tools"
+"Bug Tracker" = "https://github.com/patrickjmckee/se-tools/issues"
+
+# ==============================================================================
+# CLI entry points
+# ==============================================================================
+[project.scripts]
+req-analyzer = "tools.tool1_req_analyzer.cli:main"
+traceability = "tools.tool3_traceability.cli:main"
+mermaid-gen  = "tools.tool4_mermaid.cli:main"
+
+# ==============================================================================
+# Build system
+# ==============================================================================
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tools*"]
+
+# ==============================================================================
+# Ruff (linter)
+# ==============================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+# ==============================================================================
+# Black (formatter)
+# ==============================================================================
+[tool.black]
+line-length = 100
+target-version = ["py311", "py312"]
+
+# ==============================================================================
+# Mypy (type checker)
+# ==============================================================================
+[tool.mypy]
+python_version = "3.11"
+strict = false
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_return_any = true
+
+# ==============================================================================
+# Pytest
+# ==============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "--tb=short -q"
