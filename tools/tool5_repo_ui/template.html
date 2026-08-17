@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>prak-v-model Visualizer</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+  window.mermaid = mermaid;
+  mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
+</script>
+<style>
+  :root {
+    --bg: #fafafa;
+    --panel: #ffffff;
+    --border: #e2e2e2;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --link: #2563eb;
+    --link-hover: #1d4ed8;
+    --accent: #3730a3;
+    --persona: #1d4ed8;
+    --usecase: #047857;
+    --req: #c2410c;
+    --sysreq: #0e7490;
+    --arch: #7c3aed;
+    --initiative: #0f766e;
+    --epic: #b45309;
+    --story: #9d174d;
+    --bucket: #6b7280;
+    --btn: #3730a3;
+    --btn-hover: #312e81;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+  header {
+    padding: 10px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 18px; }
+  header .stats { color: var(--muted); font-size: 13px; }
+  header .repo-status { color: var(--muted); font-size: 12px; font-style: italic; }
+  header .repo-status .repo-name { color: var(--accent); font-style: normal; font-weight: 500; }
+  header button {
+    padding: 5px 12px;
+    background: var(--btn);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  header button:hover { background: var(--btn-hover); }
+  header button:disabled { background: #cbd5e1; cursor: not-allowed; }
+  header button.secondary {
+    background: white;
+    color: var(--btn);
+    border: 1px solid var(--btn);
+  }
+  header button.secondary:hover { background: #eef2ff; }
+  header .search input {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    width: 220px;
+  }
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr 280px;
+    overflow: hidden;
+  }
+  aside {
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    padding: 12px 0;
+  }
+  aside.right {
+    border-right: none;
+    border-left: 1px solid var(--border);
+  }
+  .section { margin-bottom: 14px; }
+  .section h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin: 0 0 4px;
+    padding: 0 16px 0 28px;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+  .section h2::before {
+    content: "▾";
+    position: absolute;
+    left: 14px;
+    top: 0;
+    font-size: 9px;
+    color: var(--muted);
+    transition: transform 0.1s;
+    display: inline-block;
+  }
+  .section h2.collapsed::before { transform: rotate(-90deg); }
+  .section h2:hover { color: var(--text); }
+  .section h2 .count { color: var(--bucket); font-weight: 500; }
+  .section h2.collapsed ~ * { display: none; }
+  .sidebar-controls {
+    padding: 6px 16px 8px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .sidebar-controls button {
+    padding: 3px 8px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .sidebar-controls button:hover { background: #f3f4f6; color: var(--text); }
+  .bucket-group { margin: 4px 0; }
+  .bucket-group .bucket-label {
+    padding: 2px 16px 2px 36px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--bucket);
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+  .bucket-group .bucket-label::before {
+    content: "▾";
+    position: absolute;
+    left: 24px;
+    top: 2px;
+    font-size: 8px;
+    color: var(--bucket);
+    display: inline-block;
+    transition: transform 0.1s;
+  }
+  .bucket-group .bucket-label.collapsed::before { transform: rotate(-90deg); }
+  .bucket-group .bucket-label:hover { color: var(--text); }
+  .bucket-group .bucket-label.collapsed + .items { display: none; }
+  .items a {
+    display: block;
+    padding: 3px 16px 3px 32px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  .items a:hover { background: #f3f4f6; }
+  .items a.active { background: #eef2ff; border-left-color: var(--accent); font-weight: 500; }
+  .kind-personas .items a { color: var(--persona); }
+  .kind-use-cases .items a { color: var(--usecase); }
+  .kind-product-requirements .items a { color: var(--req); }
+  .kind-system-requirements .items a { color: var(--sysreq); }
+  .kind-architecture-diagrams .items a { color: var(--arch); }
+  .kind-initiatives .items a { color: var(--initiative); }
+  .kind-epics .items a { color: var(--epic); }
+  .kind-stories .items a { color: var(--story); }
+  #content {
+    overflow-y: auto;
+    padding: 20px 28px;
+  }
+  #content .empty {
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 20px;
+  }
+  #content .breadcrumb { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  #content .kind-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 3px;
+    color: white;
+    margin-right: 8px;
+  }
+  .kind-badge.personas { background: var(--persona); }
+  .kind-badge.use-cases { background: var(--usecase); }
+  .kind-badge.product-requirements { background: var(--req); }
+  .kind-badge.system-requirements { background: var(--sysreq); }
+  .kind-badge.architecture-diagrams { background: var(--arch); }
+  .kind-badge.initiatives { background: var(--initiative); }
+  .kind-badge.epics { background: var(--epic); }
+  .kind-badge.stories { background: var(--story); }
+  #content h1 { margin: 8px 0 16px; font-size: 22px; }
+  #content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  #content th, #content td {
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  #content th { background: #f9fafb; font-weight: 600; }
+  #content code {
+    background: #f3f4f6;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  #content pre {
+    background: #f9fafb;
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  #content a, .ref-link {
+    color: var(--link);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  #content a:hover, .ref-link:hover { color: var(--link-hover); text-decoration: underline; }
+  #content .mermaid {
+    background: #fff;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: center;
+  }
+  #content .mermaid-wrap {
+    position: relative;
+  }
+  #content .mermaid-svg { text-align: center; }
+  #content .mermaid-dl {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 4px 10px;
+    background: var(--btn);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 0.15s, background 0.15s;
+    z-index: 2;
+  }
+  #content .mermaid-dl:hover { background: var(--btn-hover); opacity: 1; }
+  #content .mermaid-wrap:hover .mermaid-dl { opacity: 1; }
+  #content .frontmatter {
+    background: #f9fafb;
+    padding: 12px 14px;
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  #content .frontmatter .row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; padding: 2px 0; }
+  #content .frontmatter .key { color: var(--muted); font-weight: 500; }
+  aside.right h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin: 0 16px 6px;
+  }
+  aside.right .backlinks-section { margin-bottom: 16px; }
+  aside.right .backlink {
+    display: block;
+    padding: 4px 16px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  aside.right .backlink:hover { background: #f3f4f6; }
+  aside.right .backlink .field { color: var(--muted); font-size: 11px; display: block; }
+  aside.right .empty { color: var(--muted); font-style: italic; font-size: 12px; padding: 0 16px; }
+  .toast {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    background: #1f2937;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #991b1b; }
+</style>
+</head>
+<body>
+<header>
+  <h1>prak-v-model Visualizer</h1>
+  <span class="stats" id="stats"></span>
+  <span class="repo-status" id="repo-status">Showing embedded snapshot</span>
+  <button id="load-btn" title="Pick a different repo folder">Load repo&hellip;</button>
+  <button id="reload-btn" class="secondary" disabled title="Reload from the last picked folder (Chrome/Edge only)">Reload</button>
+  <input type="file" id="dir-input" webkitdirectory directory multiple style="display:none" />
+  <div class="search" style="margin-left:auto"><input id="search" placeholder="Filter artifacts..." /></div>
+</header>
+<main>
+  <aside id="sidebar"></aside>
+  <section id="content"><div class="empty">Select an artifact from the sidebar.</div></section>
+  <aside class="right" id="backlinks"><div class="empty">No artifact selected.</div></aside>
+</main>
+<div id="toast" class="toast"></div>
+<script>
+  // Embedded snapshot from build.py — may be replaced by a live folder load.
+  let DATA = __DATA__;
+  let BY_FILENAME = {};
+  let lastDirHandle = null;
+
+  const KIND_LABELS = {
+    "personas": "Personas",
+    "use-cases": "Use Cases",
+    "product-requirements": "Product Requirements",
+    "system-requirements": "System Requirements",
+    "architecture-diagrams": "Architecture Diagrams",
+    "initiatives": "Initiatives (Agile)",
+    "epics": "Epics (Agile, by team)",
+    "stories": "Stories (Agile)",
+  };
+
+  function el(tag, attrs, children) {
+    const e = document.createElement(tag);
+    if (attrs) for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v;
+      else if (k === "html") e.innerHTML = v;
+      else if (k.startsWith("on")) e.addEventListener(k.substring(2), v);
+      else e.setAttribute(k, v);
+    }
+    if (children) {
+      for (const c of (Array.isArray(children) ? children : [children])) {
+        if (c == null) continue;
+        e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+      }
+    }
+    return e;
+  }
+
+  function rebuildIndex() {
+    BY_FILENAME = {};
+    for (const kind of Object.keys(DATA)) {
+      for (const a of (DATA[kind] || [])) {
+        BY_FILENAME[a.filename] = a;
+      }
+    }
+  }
+
+  const COLLAPSE_KEY = "prak-visualizer-collapsed-sections";
+  const BUCKET_COLLAPSE_KEY = "prak-visualizer-collapsed-buckets";
+  const ALL_KINDS = ["personas","use-cases","product-requirements","system-requirements","architecture-diagrams","initiatives","epics","stories"];
+  // Custom bucket ordering per kind. Known buckets render in this order; unknown buckets sort alphabetically after.
+  const BUCKET_ORDER = {
+    "use-cases":             ["motion-authorization-framework", "path-following", "teleoperation", "actuation-framework"],
+    "product-requirements":  ["product", "functional"],
+    "system-requirements":   ["motion-authorization-framework", "path-following", "teleoperation", "actuation-framework", "remote-stop", "vehicle-support"],
+    "initiatives":           ["product-requirement", "functional-requirement"],
+  };
+  function sortBuckets(kind, bucketNames) {
+    const order = BUCKET_ORDER[kind] || [];
+    const orderIdx = (b) => { const i = order.indexOf(b); return i === -1 ? 1e6 : i; };
+    return [...bucketNames].sort((a, b) => {
+      const ai = orderIdx(a), bi = orderIdx(b);
+      if (ai !== bi) return ai - bi;
+      return a.localeCompare(b);
+    });
+  }
+  function getCollapsedBuckets() {
+    try { return new Set(JSON.parse(localStorage.getItem(BUCKET_COLLAPSE_KEY) || "[]")); }
+    catch (e) { return new Set(); }
+  }
+  function saveCollapsedBuckets(s) {
+    try { localStorage.setItem(BUCKET_COLLAPSE_KEY, JSON.stringify([...s])); } catch (e) {}
+  }
+  function getCollapsedSet() {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_KEY);
+      // First load (no saved state) → default to all collapsed
+      if (raw === null) return new Set(ALL_KINDS);
+      return new Set(JSON.parse(raw));
+    } catch (e) {
+      return new Set(ALL_KINDS);
+    }
+  }
+  function saveCollapsedSet(s) {
+    try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...s])); } catch (e) {}
+  }
+
+  function buildSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.innerHTML = "";
+
+    // Controls: expand-all / collapse-all
+    const controls = el("div", { class: "sidebar-controls" }, [
+      el("button", {
+        title: "Expand all sections",
+        onclick: () => { saveCollapsedSet(new Set()); buildSidebar(); if (location.hash) loadFromHash(); }
+      }, "Expand all"),
+      el("button", {
+        title: "Collapse all sections",
+        onclick: () => {
+          saveCollapsedSet(new Set(ALL_KINDS));
+          buildSidebar();
+          if (location.hash) loadFromHash();
+        }
+      }, "Collapse all"),
+    ]);
+    sidebar.appendChild(controls);
+
+    const collapsed = getCollapsedSet();
+    for (const kind of ["personas", "use-cases", "product-requirements", "system-requirements", "architecture-diagrams", "initiatives", "epics", "stories"]) {
+      const arr = DATA[kind] || [];
+      const section = el("div", { class: `section kind-${kind}` });
+      const isCollapsed = collapsed.has(kind);
+      const heading = el("h2", {
+        class: isCollapsed ? "collapsed" : "",
+        onclick: () => {
+          heading.classList.toggle("collapsed");
+          const s = getCollapsedSet();
+          if (heading.classList.contains("collapsed")) s.add(kind); else s.delete(kind);
+          saveCollapsedSet(s);
+        }
+      }, [`${KIND_LABELS[kind]} `, el("span", { class: "count" }, `(${arr.length})`)]);
+      section.appendChild(heading);
+
+      const byBucket = {};
+      for (const a of arr) {
+        const b = a.bucket || "";
+        (byBucket[b] = byBucket[b] || []).push(a);
+      }
+      const buckets = sortBuckets(kind, Object.keys(byBucket));
+      const collapsedBuckets = getCollapsedBuckets();
+      for (const b of buckets) {
+        const group = el("div", { class: "bucket-group" });
+        if (b) {
+          const bkey = kind + "/" + b;
+          const isBucketCollapsed = collapsedBuckets.has(bkey);
+          const label = el("div", {
+            class: "bucket-label" + (isBucketCollapsed ? " collapsed" : ""),
+            onclick: () => {
+              label.classList.toggle("collapsed");
+              const s = getCollapsedBuckets();
+              if (label.classList.contains("collapsed")) s.add(bkey); else s.delete(bkey);
+              saveCollapsedBuckets(s);
+            }
+          }, b);
+          group.appendChild(label);
+        }
+        const items = el("div", { class: "items" });
+        for (const a of byBucket[b].sort((x, y) => x.title.localeCompare(y.title))) {
+          const link = el("a", {
+            href: "#" + a.filename.replace(/\.md$/, ""),
+            "data-filename": a.filename,
+            onclick: (e) => { e.preventDefault(); selectArtifact(a.filename); },
+          }, a.title);
+          items.appendChild(link);
+        }
+        group.appendChild(items);
+        section.appendChild(group);
+      }
+      sidebar.appendChild(section);
+    }
+  }
+
+  function buildStats() {
+    const stats = document.getElementById("stats");
+    const counts = Object.entries(DATA).map(([k, v]) => `${(v || []).length} ${KIND_LABELS[k].toLowerCase()}`);
+    stats.textContent = counts.join(" · ");
+  }
+
+  function renderFrontmatter(fm) {
+    if (!fm || Object.keys(fm).length === 0) return null;
+    const wrap = el("div", { class: "frontmatter" });
+    const order = ["id", "title", "class", "primary-actor", "parent-persona",
+                   "parent-use-cases", "parent-product-requirement",
+                   "parent-functional-requirement",
+                   "parent-initiative", "parent-system-requirement", "parent-epic",
+                   "child-epics", "child-stories",
+                   "diagram-type", "allocation", "platform-team", "platform-teams", "teams",
+                   "priority", "status", "estimated-sprints"];
+    const seen = new Set();
+    for (const key of order) {
+      if (!(key in fm)) continue;
+      seen.add(key);
+      wrap.appendChild(renderFmRow(key, fm[key]));
+    }
+    for (const key of Object.keys(fm)) {
+      if (seen.has(key)) continue;
+      wrap.appendChild(renderFmRow(key, fm[key]));
+    }
+    return wrap;
+  }
+
+  function renderFmRow(key, val) {
+    const row = el("div", { class: "row" });
+    row.appendChild(el("div", { class: "key" }, key));
+    const valCell = el("div");
+    const items = Array.isArray(val) ? val : [val];
+    for (let i = 0; i < items.length; i++) {
+      const v = items[i];
+      if (i > 0) valCell.appendChild(document.createTextNode(", "));
+      if (typeof v === "string" && v.endsWith(".md") && BY_FILENAME[v]) {
+        const a = BY_FILENAME[v];
+        valCell.appendChild(el("a", {
+          class: "ref-link",
+          href: "#" + v.replace(/\.md$/, ""),
+          onclick: (e) => { e.preventDefault(); selectArtifact(v); },
+        }, a.title + " (" + v + ")"));
+      } else {
+        valCell.appendChild(document.createTextNode(String(v)));
+      }
+    }
+    row.appendChild(valCell);
+    return row;
+  }
+
+  function renderBody(body) {
+    const mermaids = [];
+    body = body.replace(/```mermaid\n([\s\S]*?)\n```/g, (m, code) => {
+      const idx = mermaids.length;
+      mermaids.push(code);
+      return `<div class="mermaid" data-mermaid-idx="${idx}"></div>`;
+    });
+    const html = marked.parse(body, { gfm: true, breaks: false });
+    const wrap = el("div");
+    wrap.innerHTML = html;
+    wrap.querySelectorAll("[data-mermaid-idx]").forEach(div => {
+      const idx = parseInt(div.dataset.mermaidIdx, 10);
+      div.textContent = mermaids[idx];
+    });
+    wrap.querySelectorAll("a").forEach(a => {
+      const href = a.getAttribute("href") || "";
+      const m = href.match(/([a-z0-9-]+\.md)(?:#.*)?$/i);
+      if (m && BY_FILENAME[m[1]]) {
+        a.setAttribute("href", "#" + m[1].replace(/\.md$/, ""));
+        a.addEventListener("click", (e) => { e.preventDefault(); selectArtifact(m[1]); });
+      }
+    });
+    wrap.querySelectorAll("code").forEach(code => {
+      const txt = code.textContent;
+      const m = txt.match(/^((?:uc|req|sysreq|arch)-[a-z0-9-]+\.md)$/);
+      if (m && BY_FILENAME[m[1]]) {
+        const link = el("a", {
+          class: "ref-link",
+          href: "#" + m[1].replace(/\.md$/, ""),
+          onclick: (e) => { e.preventDefault(); selectArtifact(m[1]); },
+        });
+        link.appendChild(code.cloneNode(true));
+        code.replaceWith(link);
+      }
+    });
+    return wrap;
+  }
+
+  async function ensureMermaidReady() {
+    if (window.mermaid && typeof window.mermaid.render === "function") return window.mermaid;
+    // ESM module script is deferred — wait up to ~10s for it to set window.mermaid
+    for (let i = 0; i < 100; i++) {
+      await new Promise(r => setTimeout(r, 100));
+      if (window.mermaid && typeof window.mermaid.render === "function") return window.mermaid;
+    }
+    throw new Error("Mermaid library did not load (check CDN connectivity / blocked scripts)");
+  }
+
+  async function renderMermaidIn(container) {
+    // Derive artifact slug for file naming (use current selected hash if available)
+    const slugBase = ((location.hash || "").replace(/^#/, "")) || "diagram";
+    const blocks = container.querySelectorAll(".mermaid");
+    if (blocks.length === 0) return;
+    let mermaidLib;
+    try {
+      mermaidLib = await ensureMermaidReady();
+    } catch (err) {
+      blocks.forEach(b => { b.innerHTML = "<pre style='color:#c00'>Mermaid render error:\n" + (err.message || err) + "</pre>"; });
+      return;
+    }
+    for (let i = 0; i < blocks.length; i++) {
+      const div = blocks[i];
+      const code = div.textContent;
+      const id = "m" + Date.now() + "_" + i;
+      try {
+        const { svg } = await mermaidLib.render(id, code);
+        // Wrap the SVG in a container with a download button overlay
+        const fileSlug = `${slugBase}${blocks.length > 1 ? "-" + (i + 1) : ""}`;
+        div.innerHTML = `
+          <div class="mermaid-wrap">
+            <button class="mermaid-dl" type="button"
+                    title="Download as PNG"
+                    data-file-slug="${fileSlug}">Download PNG</button>
+            <div class="mermaid-svg">${svg}</div>
+          </div>`;
+        const btn = div.querySelector(".mermaid-dl");
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const svgEl = div.querySelector(".mermaid-svg svg");
+          if (!svgEl) {
+            console.warn("No SVG found in mermaid container", div);
+            toast("PNG export failed: no SVG to convert", true);
+            return;
+          }
+          toast("Generating PNG…");
+          downloadSvgAsPng(svgEl, btn.dataset.fileSlug);
+        });
+      } catch (err) {
+        div.innerHTML = "<pre style='color:#c00'>Mermaid render error:\n" + (err && err.message ? err.message : err) + "</pre>";
+      }
+    }
+  }
+
+  function downloadSvgAsPng(svgEl, fileSlug, scale) {
+    if (!scale) scale = 2;
+    try {
+      // Clone, normalize namespaces and dimensions
+      const cloned = svgEl.cloneNode(true);
+      cloned.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      cloned.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+      const vb = svgEl.viewBox && svgEl.viewBox.baseVal;
+      const bbox = svgEl.getBoundingClientRect();
+      let w = (vb && vb.width) ? vb.width : bbox.width;
+      let h = (vb && vb.height) ? vb.height : bbox.height;
+      if (!w || !h) {
+        // Fall back to attribute-based dims
+        w = parseFloat(svgEl.getAttribute("width")) || 800;
+        h = parseFloat(svgEl.getAttribute("height")) || 600;
+      }
+      cloned.setAttribute("width", w);
+      cloned.setAttribute("height", h);
+
+      // Inline computed styles on every element that originally had foreignObject text
+      // (mermaid 10 uses foreignObject for HTML labels; canvas can usually render them
+      // but only if styles are present. We'll defer to default — most labels still come through.)
+
+      const svgString = new XMLSerializer().serializeToString(cloned);
+      // Use a base64 data URL — more reliable than Blob URLs across browsers/CSPs
+      const b64 = btoa(unescape(encodeURIComponent(svgString)));
+      const dataUrl = "data:image/svg+xml;base64," + b64;
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = function () {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.setTransform(scale, 0, 0, scale, 0, 0);
+          ctx.drawImage(img, 0, 0);
+          // Try Blob first, fall back to dataURL
+          if (canvas.toBlob) {
+            canvas.toBlob(function (blob) {
+              if (blob) {
+                triggerDownload(URL.createObjectURL(blob), fileSlug + ".png", true);
+              } else {
+                triggerDownload(canvas.toDataURL("image/png"), fileSlug + ".png", false);
+              }
+            }, "image/png");
+          } else {
+            triggerDownload(canvas.toDataURL("image/png"), fileSlug + ".png", false);
+          }
+        } catch (innerErr) {
+          console.error("PNG canvas/export error:", innerErr);
+          toast("PNG export failed: " + (innerErr.message || innerErr), true);
+        }
+      };
+      img.onerror = function (e) {
+        console.error("SVG load error:", e);
+        toast("PNG export failed (could not load SVG as image — see console)", true);
+      };
+      img.src = dataUrl;
+    } catch (err) {
+      console.error("PNG export setup error:", err);
+      toast("PNG export failed: " + (err.message || err), true);
+    }
+  }
+
+  function triggerDownload(href, filename, revoke) {
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (revoke) setTimeout(function () { URL.revokeObjectURL(href); }, 5000);
+  }
+
+  function renderBacklinks(a) {
+    const panel = document.getElementById("backlinks");
+    panel.innerHTML = "";
+    if (!a) {
+      panel.appendChild(el("div", { class: "empty" }, "No artifact selected."));
+      return;
+    }
+    const groups = {};
+    for (const r of a.refs_in || []) {
+      (groups[r.kind] = groups[r.kind] || []).push(r);
+    }
+    if (Object.keys(groups).length === 0) {
+      panel.appendChild(el("h3", {}, "Referenced by"));
+      panel.appendChild(el("div", { class: "empty" }, "Nothing references this artifact."));
+      return;
+    }
+    panel.appendChild(el("h3", {}, "Referenced by"));
+    for (const kind of Object.keys(groups).sort()) {
+      const section = el("div", { class: "backlinks-section" });
+      section.appendChild(el("h3", {}, KIND_LABELS[kind] || kind));
+      for (const r of groups[kind]) {
+        section.appendChild(el("a", {
+          class: "backlink",
+          href: "#" + r.filename.replace(/\.md$/, ""),
+          onclick: (e) => { e.preventDefault(); selectArtifact(r.filename); },
+        }, [r.title, el("span", { class: "field" }, "via " + r.field)]));
+      }
+      panel.appendChild(section);
+    }
+  }
+
+  function selectArtifact(filename) {
+    const a = BY_FILENAME[filename];
+    if (!a) return;
+    const content = document.getElementById("content");
+    content.innerHTML = "";
+    const breadcrumb = el("div", { class: "breadcrumb" },
+      [el("span", { class: "kind-badge " + a.kind }, KIND_LABELS[a.kind]), a.bucket || "(no bucket)"]);
+    content.appendChild(breadcrumb);
+    content.appendChild(el("h1", {}, a.title));
+    const fm = renderFrontmatter(a.frontmatter);
+    if (fm) content.appendChild(fm);
+    content.appendChild(renderBody(a.body));
+    document.querySelectorAll("#sidebar a").forEach(link => {
+      link.classList.toggle("active", link.dataset.filename === filename);
+    });
+    const hash = "#" + filename.replace(/\.md$/, "");
+    if (location.hash !== hash) history.replaceState(null, "", hash);
+    renderBacklinks(a);
+    renderMermaidIn(content);
+  }
+
+  function loadFromHash() {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (!h) return;
+    const fn = h.endsWith(".md") ? h : h + ".md";
+    if (BY_FILENAME[fn]) selectArtifact(fn);
+  }
+
+  function toast(msg, isError) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.toggle("error", !!isError);
+    t.classList.add("show");
+    clearTimeout(t._tid);
+    t._tid = setTimeout(() => t.classList.remove("show"), 3200);
+  }
+
+  function setRepoStatus(name) {
+    const status = document.getElementById("repo-status");
+    if (name) {
+      status.innerHTML = "Loaded repo: <span class=\"repo-name\"></span>";
+      status.querySelector(".repo-name").textContent = name;
+    } else {
+      status.textContent = "Showing embedded snapshot";
+    }
+  }
+
+  // === Artifact parsing (mirror of build.py logic) ===
+
+  function parseFrontmatter(text) {
+    const m = text.match(/^---\n([\s\S]+?)\n---\n/);
+    if (!m) return { fm: {}, body: text };
+    try {
+      const fm = jsyaml.load(m[1]) || {};
+      return { fm: typeof fm === "object" ? fm : {}, body: text.slice(m[0].length) };
+    } catch (err) {
+      return { fm: {}, body: text };
+    }
+  }
+
+  function emptyData() {
+    return {
+      "personas": [],
+      "use-cases": [],
+      "product-requirements": [],
+      "system-requirements": [],
+      "architecture-diagrams": [],
+      "initiatives": [],
+      "epics": [],
+      "stories": [],
+    };
+  }
+
+  function buildArtifact(kind, filename, bucket, text, relPath) {
+    const { fm, body } = parseFrontmatter(text);
+    return {
+      id: filename.replace(/\.md$/, ""),
+      filename,
+      title: fm.title || filename.replace(/\.md$/, ""),
+      bucket: bucket || "",
+      kind,
+      frontmatter: fm,
+      body,
+      path: relPath,
+      refs_out: [],
+      refs_in: [],
+    };
+  }
+
+  function computeReferences(data) {
+    const byFilename = {};
+    for (const kind of Object.keys(data)) for (const a of data[kind]) byFilename[a.filename] = a;
+    const fields = ["parent-persona", "primary-actor", "parent-use-case", "parent-use-cases", "parent-product-requirement", "parent-functional-requirement", "parent-initiative", "parent-system-requirement", "parent-epic", "child-epics", "child-stories"];
+    for (const a of Object.values(byFilename)) {
+      a.refs_out = []; a.refs_in = [];
+    }
+    for (const a of Object.values(byFilename)) {
+      const fm = a.frontmatter || {};
+      for (const f of fields) {
+        const v = fm[f];
+        if (v == null) continue;
+        const targets = Array.isArray(v) ? v : [v];
+        for (const t of targets) {
+          if (typeof t !== "string" || !t.endsWith(".md")) continue;
+          const target = byFilename[t];
+          if (!target) continue;
+          a.refs_out.push({ field: f, filename: t, title: target.title, kind: target.kind });
+          target.refs_in.push({ field: f, filename: a.filename, title: a.title, kind: a.kind });
+        }
+      }
+    }
+  }
+
+  // === Reading via File System Access API (Chrome/Edge) ===
+
+  async function readDirHandle(dirHandle) {
+    const data = emptyData();
+    async function getSubdir(parent, name) {
+      try { return await parent.getDirectoryHandle(name); } catch { return null; }
+    }
+    async function readMdAt(dirHandle, kind, bucket, prefix) {
+      for await (const [name, h] of dirHandle.entries()) {
+        if (h.kind === "file" && name.endsWith(".md") && (prefix === "" || name.startsWith(prefix))) {
+          const file = await h.getFile();
+          const text = await file.text();
+          const relPath = (bucket ? bucket + "/" : "") + name;
+          data[kind].push(buildArtifact(kind, name, bucket, text, relPath));
+        }
+      }
+    }
+    async function readBuckets(rootDir, kind, prefix) {
+      for await (const [bucket, h] of rootDir.entries()) {
+        if (h.kind === "directory") await readMdAt(h, kind, bucket, prefix);
+      }
+    }
+    const product = await getSubdir(dirHandle, "product");
+    const system = await getSubdir(dirHandle, "system");
+    if (product) {
+      const personas = await getSubdir(product, "personas");
+      if (personas) await readMdAt(personas, "personas", "", "");
+      const uc = await getSubdir(product, "use-cases");
+      if (uc) await readBuckets(uc, "use-cases", "uc-");
+      const req = await getSubdir(product, "requirements");
+      if (req) await readBuckets(req, "product-requirements", "req-");
+    }
+    if (system) {
+      const sysreq = await getSubdir(system, "requirements");
+      if (sysreq) await readBuckets(sysreq, "system-requirements", "sysreq-");
+      const arch = await getSubdir(system, "architecture");
+      if (arch) await readBuckets(arch, "architecture-diagrams", "arch-");
+    }
+    const agile = await getSubdir(dirHandle, "agile-planning");
+    if (agile) {
+      const initDir = await getSubdir(agile, "initiatives");
+      if (initDir) {
+        for await (const entry of initDir.values()) {
+          if (entry.kind !== "file" || !entry.name.startsWith("initiative-") || !entry.name.endsWith(".md")) continue;
+          const file = await entry.getFile();
+          const text = await file.text();
+          const art = buildArtifact("initiatives", entry.name, "", text, "agile-planning/initiatives/" + entry.name);
+          if (art.frontmatter && art.frontmatter["parent-functional-requirement"]) art.bucket = "functional-requirement";
+          else if (art.frontmatter && art.frontmatter["parent-product-requirement"]) art.bucket = "product-requirement";
+          data["initiatives"].push(art);
+        }
+      }
+      const epicsDir = await getSubdir(agile, "epics");
+      if (epicsDir) {
+        for await (const entry of epicsDir.values()) {
+          if (entry.kind !== "file" || !entry.name.startsWith("epic-") || !entry.name.endsWith(".md")) continue;
+          const file = await entry.getFile();
+          const text = await file.text();
+          const art = buildArtifact("epics", entry.name, "", text, "agile-planning/epics/" + entry.name);
+          art.bucket = (art.frontmatter && art.frontmatter["platform-team"]) || "unassigned";
+          data["epics"].push(art);
+        }
+      }
+      const storiesDir = await getSubdir(agile, "stories");
+      if (storiesDir) {
+        for await (const entry of storiesDir.values()) {
+          if (entry.kind !== "file" || !entry.name.startsWith("story-") || !entry.name.endsWith(".md")) continue;
+          const file = await entry.getFile();
+          const text = await file.text();
+          const art = buildArtifact("stories", entry.name, "", text, "agile-planning/stories/" + entry.name);
+          art.bucket = (art.frontmatter && art.frontmatter["platform-team"]) || "unassigned";
+          data["stories"].push(art);
+        }
+      }
+    }
+    computeReferences(data);
+    return data;
+  }
+
+  // === Reading via webkitdirectory <input> fallback (Firefox/Safari) ===
+
+  async function readFileList(files) {
+    const data = emptyData();
+    const readers = [];
+    for (const f of files) {
+      const path = f.webkitRelativePath || f.name;
+      if (!path.endsWith(".md")) continue;
+      // Detect kind from path: <root>/product/personas/X.md etc.
+      const parts = path.split("/");
+      // Drop the top-level root name (the picked folder)
+      const sub = parts.slice(1).join("/");
+      let kind = null, bucket = "", prefix = "";
+      if (sub.startsWith("product/personas/")) {
+        kind = "personas"; bucket = "";
+      } else if (sub.match(/^product\/use-cases\/[^/]+\/uc-[^/]+\.md$/)) {
+        kind = "use-cases"; bucket = sub.split("/")[2]; prefix = "uc-";
+      } else if (sub.match(/^product\/requirements\/[^/]+\/req-[^/]+\.md$/)) {
+        kind = "product-requirements"; bucket = sub.split("/")[2]; prefix = "req-";
+      } else if (sub.match(/^system\/requirements\/[^/]+\/sysreq-[^/]+\.md$/)) {
+        kind = "system-requirements"; bucket = sub.split("/")[2]; prefix = "sysreq-";
+      } else if (sub.match(/^system\/architecture\/[^/]+\/arch-[^/]+\.md$/)) {
+        kind = "architecture-diagrams"; bucket = sub.split("/")[2]; prefix = "arch-";
+      } else if (sub.match(/^agile-planning\/initiatives\/initiative-[^/]+\.md$/)) {
+        kind = "initiatives"; bucket = ""; prefix = "initiative-";
+      } else if (sub.match(/^agile-planning\/epics\/epic-[^/]+\.md$/)) {
+        kind = "epics"; bucket = ""; prefix = "epic-";
+      } else if (sub.match(/^agile-planning\/stories\/story-[^/]+\.md$/)) {
+        kind = "stories"; bucket = ""; prefix = "story-";
+      } else {
+        continue;
+      }
+      const filename = parts[parts.length - 1];
+      readers.push(f.text().then(text => {
+        const art = buildArtifact(kind, filename, bucket, text, sub);
+        if (kind === "initiatives" && art.frontmatter) {
+          if (art.frontmatter["parent-functional-requirement"]) art.bucket = "functional-requirement";
+          else if (art.frontmatter["parent-product-requirement"]) art.bucket = "product-requirement";
+        } else if ((kind === "epics" || kind === "stories") && art.frontmatter) {
+          art.bucket = (art.frontmatter["platform-team"] || "unassigned");
+        }
+        data[kind].push(art);
+      }));
+    }
+    await Promise.all(readers);
+    computeReferences(data);
+    return data;
+  }
+
+  function applyLoadedData(newData, repoName) {
+    DATA = newData;
+    rebuildIndex();
+    buildSidebar();
+    buildStats();
+    setRepoStatus(repoName);
+    const content = document.getElementById("content");
+    content.innerHTML = "<div class=\"empty\">Select an artifact from the sidebar.</div>";
+    const back = document.getElementById("backlinks");
+    back.innerHTML = "<div class=\"empty\">No artifact selected.</div>";
+    if (location.hash) loadFromHash();
+    const totals = Object.values(newData).reduce((s, arr) => s + arr.length, 0);
+    toast("Loaded " + totals + " artifacts from " + repoName);
+  }
+
+  // === Button wiring ===
+
+
+  document.getElementById("load-btn").addEventListener("click", async () => {
+    if (window.showDirectoryPicker) {
+      try {
+        const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+        const data = await readDirHandle(dirHandle);
+        lastDirHandle = dirHandle;
+        document.getElementById("reload-btn").disabled = false;
+        applyLoadedData(data, dirHandle.name);
+      } catch (err) {
+        if (err && err.name !== "AbortError") toast("Load failed: " + err.message, true);
+      }
+    } else {
+      document.getElementById("dir-input").click();
+    }
+  });
+
+  document.getElementById("dir-input").addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    try {
+      const data = await readFileList(files);
+      const repoName = (files[0].webkitRelativePath || "").split("/")[0] || "selected folder";
+      applyLoadedData(data, repoName);
+    } catch (err) {
+      toast("Load failed: " + err.message, true);
+    } finally {
+      e.target.value = "";
+    }
+  });
+
+  document.getElementById("reload-btn").addEventListener("click", async () => {
+    if (!lastDirHandle) return;
+    try {
+      const data = await readDirHandle(lastDirHandle);
+      applyLoadedData(data, lastDirHandle.name);
+    } catch (err) {
+      toast("Reload failed: " + err.message, true);
+    }
+  });
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll("#sidebar .items a").forEach(link => {
+      const visible = !q || link.textContent.toLowerCase().includes(q) || (link.dataset.filename || "").toLowerCase().includes(q);
+      link.style.display = visible ? "" : "none";
+    });
+  });
+
+  // === Init ===
+  rebuildIndex();
+  buildSidebar();
+  buildStats();
+  loadFromHash();
+  window.addEventListener("hashchange", loadFromHash);
+</script>
+</body>
+</html>

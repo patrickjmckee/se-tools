@@ -55,6 +55,12 @@ python -m tools.tool3_traceability --input requirements_output.csv
 python -m tools.tool4_mermaid
 ```
 
+Tool 5 is a static-site builder, not a Claude API tool. Run its script directly:
+
+```bash
+python3 tools/tool5_repo_ui/build.py --repo /path/to/v-model-repo
+```
+
 ---
 
 ## Tool 1 -- Requirements Quality Analyzer
@@ -298,6 +304,67 @@ Output is a markdown file containing the diagram title, type, notes, and a fence
 
 ---
 
+## Tool 5 -- V-Model Repo Visualizer
+
+Builds a self-contained HTML page that lets you click through V-model artifacts (personas, use cases, product requirements, architecture diagrams) and see how they are connected. No server, no API key. Open the generated `index.html` in a browser.
+
+Full detail: `tools/tool5_repo_ui/README.md`.
+
+### Two modes
+
+| Mode | How |
+|---|---|
+| Snapshot | `build.py` embeds a repo's current state into `index.html`. Shareable as one file. |
+| Live folder | Click **Load repo** in the page header and pick a folder. Parsed in-browser. Chrome/Edge get a **Reload** button via the File System Access API; Firefox/Safari fall back to a directory input. |
+
+### Expected repo structure
+
+Any subset of:
+
+```
+<root>/
+  product/
+    personas/<name>.md
+    use-cases/<feature>/uc-<name>.md
+    requirements/<feature>/req-<name>.md
+  system/
+    requirements/<feature>/sysreq-<name>.md
+    architecture/<feature>/arch-<name>.md
+  agile-planning/
+    initiatives/initiative-<name>.md
+    epics/epic-<name>.md
+    stories/story-<name>.md
+```
+
+Required YAML frontmatter per artifact type:
+
+| Artifact | Required fields |
+|---|---|
+| Persona | `id`, `title`, `class` |
+| Use Case | `id`, `title`, `primary-actor`, `parent-persona` |
+| Product Requirement | `id`, `title`, `parent-use-cases` (list), `priority` |
+| System Requirement | `id`, `title`, `parent-product-requirement` |
+| Architecture Diagram | `id`, `title`, `parent-product-requirement`, `diagram-type` |
+| Initiative / Epic / Story | `id`, `title`, plus any of `parent-initiative`, `parent-epic`, `child-epics`, `child-stories` |
+
+Cross-reference fields must hold the target's `.md` filename, not its `id`. Backlinks ("Referenced by") are computed from those fields.
+
+### Usage
+
+```bash
+python3 tools/tool5_repo_ui/build.py --repo /path/to/v-model-repo
+python3 tools/tool5_repo_ui/build.py --repo /path/to/repo --out /tmp/snapshot.html
+python3 tools/tool5_repo_ui/build.py --repo /path/to/repo --template ./my-template.html
+```
+
+Pass `--repo` explicitly. Its default resolves relative to `build.py`, which points at `tools/prak-v-model` inside this repo and does not exist.
+
+Default output: `tools/tool5_repo_ui/index.html` (overwritten each build).
+
+Requires `pyyaml` (installed with the package). The generated page loads `marked@12`, `mermaid@10`, and `js-yaml@4` from a CDN, so first open needs a network connection.
+
+---
+
 ## File structure
 
 ```
@@ -325,6 +392,11 @@ se-tools/
       formatter.py      -- console output and .md file save
       config.py         -- model name, supported diagram types
       cli.py            -- argparse CLI and interactive session loop
+    tool5_repo_ui/
+      build.py          -- reads a v-model repo, parses frontmatter, computes references
+      template.html     -- page + rendering JS; __DATA__ placeholder replaced at build time
+      index.html        -- generated snapshot (overwritten on each build)
+      README.md         -- tool-specific detail
   docs/
   tests/
   .env                  -- API key (gitignored)
